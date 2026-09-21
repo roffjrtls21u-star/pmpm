@@ -873,7 +873,8 @@
       students.forEach(student => {
         const theme = THEMES[student.theme] || THEMES.ruby;
         const target = student.target || globalTarget;
-        const percent = Math.min(100, Math.round((student.gems / target) * 100));
+        const rawPercent = Math.round((student.gems / target) * 100);
+        const percent = Math.max(0, Math.min(100, rawPercent));
         const isSelected = selectedStudentIds.has(student.id);
 
         const card = document.createElement('div');
@@ -922,10 +923,11 @@
         const bottomRow = document.createElement('div');
         bottomRow.className = "flex items-center justify-between";
         bottomRow.innerHTML = `
-          <span class="font-extrabold text-[15px] sm:text-[16px] text-[#1D2138] tracking-tight">
+          <span class="font-extrabold text-[15px] sm:text-[16px] ${student.gems < 0 ? 'text-rose-500 font-black' : 'text-[#1D2138]'} tracking-tight">
             ${student.gems} / ${target}
           </span>
           ${percent >= 100 ? `<span class="text-[11px] font-extrabold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full animate-bounce">목표 달성! 🎁</span>` : ''}
+          ${student.gems < 0 ? `<span class="text-[10px] font-bold text-rose-500 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md">보석 부족 (${student.gems})</span>` : ''}
         `;
 
         card.appendChild(topRow);
@@ -1076,14 +1078,13 @@
             }
           }
         } else {
-          if (student.gems > 0) {
-            student.gems -= 1;
-            student.history.unshift({
-              timestamp: Date.now(),
-              reason: `[차감] ${reasonText}`
-            });
-            if (student.history.length > 50) student.history.pop();
-          }
+          // 0개 이하에서도 음수로 계속 차감 가능하도록 조건 해제
+          student.gems -= 1;
+          student.history.unshift({
+            timestamp: Date.now(),
+            reason: `[차감] ${reasonText}`
+          });
+          if (student.history.length > 50) student.history.pop();
         }
 
         await saveStudentToFirestore(student);
@@ -1184,16 +1185,17 @@
     function renderDetailModal(student) {
       const theme = THEMES[student.theme] || THEMES.ruby;
       const target = student.target || globalTarget;
-      const percent = Math.min(100, Math.round((student.gems / target) * 100));
+      const rawPercent = Math.round((student.gems / target) * 100);
+      const percent = Math.max(0, Math.min(100, rawPercent));
 
       document.getElementById('modal-student-name').innerText = student.name;
-      document.getElementById('modal-gem-progress-text').innerText = `${student.gems} / ${target} 개 수집 (${percent}%)`;
+      document.getElementById('modal-gem-progress-text').innerText = `${student.gems} / ${target} 개 수집 (${rawPercent}%)`;
       document.getElementById('modal-gem-icon-badge').innerHTML = theme.svg;
 
       const starBox = document.getElementById('modal-star-badges');
       starBox.innerHTML = student.rewards > 0 ? `★ × ${student.rewards}회 달성` : '';
 
-      document.getElementById('modal-percent-label').innerText = `${percent}% 완료`;
+      document.getElementById('modal-percent-label').innerText = `${rawPercent}% 완료`;
       const pBar = document.getElementById('modal-progress-bar');
       pBar.style.width = `${percent}%`;
       pBar.className = `h-full ${theme.bar} rounded-full transition-all duration-300`;
@@ -1202,7 +1204,7 @@
       const gemGrid = document.getElementById('modal-gem-grid');
       gemGrid.innerHTML = '';
       for (let i = 0; i < target; i++) {
-        const isFilled = i < student.gems;
+        const isFilled = student.gems > 0 && i < student.gems;
         const cell = document.createElement('div');
         cell.className = `aspect-square rounded-md flex items-center justify-center text-[10px] font-bold transition-all ${
           isFilled 
