@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>보석반 보상 스티커</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti for celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- Tone.js for web audio sfx -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <!-- Font: Pretendard -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            page: '#F2F1F8',
+            brand: '#1E2544',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #F1F0F8;
+      font-family: 'Pretendard', sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #CBD5E1;
+      border-radius: 9999px;
+    }
+    .modal-backdrop {
+      backdrop-filter: blur(4px);
+    }
+    .student-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 14px 0 rgba(79, 70, 115, 0.06);
+    }
+    .student-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px 0 rgba(79, 70, 115, 0.12);
+    }
+    .quick-btn {
+      transition: all 0.15s ease;
+    }
+    .quick-btn:active {
+      transform: scale(0.92);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.95); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.2s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-800 p-3 sm:p-6 lg:p-8">
+
+  <header class="max-w-6xl mx-auto w-full mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <!-- Title & Status Header -->
+      <div>
+        <div class="flex items-center gap-2.5">
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1C2038]">
+            보석반 보상 스티커
+          </h1>
+          <div id="cloud-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all bg-amber-50 text-amber-700 border-amber-200 shadow-xs">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            <span>연결 준비 중...</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <p class="text-xs sm:text-sm text-slate-500 font-medium">
+            학생 카드를 누르면 개인 보석판이 열려요
+          </p>
+          <span id="cloud-user-tag" class="hidden text-[10px] text-slate-400 font-mono border-l border-slate-300 pl-2"></span>
+        </div>
+      </div>
+
+      <!-- Top Right Action Controls -->
+      <div class="flex items-center flex-wrap gap-2 sm:gap-2.5">
+        <button id="btn-select-all" class="px-3.5 py-2 bg-white text-slate-700 hover:text-indigo-600 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold shadow-sm hover:shadow transition active:scale-95 flex items-center gap-1.5">
+          <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+          <span id="btn-select-all-text">전체 선택</span>
+        </button>
+        <button id="btn-open-roster-modal" class="px-4 py-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold shadow-sm hover:shadow transition active:scale-95">
+          학생 명단
+        </button>
+        <button id="btn-open-settings-modal" class="px-4 py-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold shadow-sm hover:shadow transition active:scale-95">
+          기본 설정
+        </button>
+        <button id="btn-export-modal" class="px-4 py-2 bg-white text-slate-700 hover:text-slate-900 border border-slate-200/80 rounded-2xl text-xs sm:text-sm font-semibold shadow-sm hover:shadow transition active:scale-95">
+          내보내기
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto w-full flex-1 pb-24">
+    <!-- 3 columns grid on desktop matching original design -->
+    <div id="students-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 lg:gap-5">
+      <!-- Injected via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-24 px-4 text-center">
+      <div class="w-16 h-16 bg-white rounded-3xl flex items-center justify-center text-indigo-500 mb-4 shadow-sm border border-slate-200">
+        <i data-lucide="sparkles" class="w-8 h-8"></i>
+      </div>
+      <h2 class="text-base font-bold text-slate-800">등록된 학생이 없습니다</h2>
+      <p class="text-xs text-slate-500 mt-1 max-w-sm">
+        상단의 [학생 명단] 버튼을 눌러 학생 명단을 등록해주세요.
+      </p>
+      <button id="btn-empty-add" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow transition">
+        학생 명단 추가하기
+      </button>
+    </div>
+  </main>
+
+  <div id="floating-action-bar" class="fixed bottom-5 inset-x-0 mx-auto max-w-lg w-[92%] bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-3xl shadow-2xl z-40 flex items-center justify-between transition-all duration-300 transform translate-y-28 opacity-0 pointer-events-none border border-white/10">
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-black shadow">
+        <span id="selected-count-badge">0</span>
+      </div>
+      <div class="text-xs font-semibold leading-tight">
+        <span class="text-white font-bold">명 선택됨</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button id="btn-batch-minus" class="px-3.5 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-rose-200 border border-rose-500/30 rounded-2xl text-xs font-bold transition active:scale-95 flex items-center gap-1">
+        <span>- 스티커 차감</span>
+      </button>
+      <button id="btn-batch-plus" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-lg shadow-indigo-500/30 transition active:scale-95 flex items-center gap-1">
+        <span>+ 스티커 지급</span>
+      </button>
+      <button id="btn-batch-cancel" class="p-2 text-slate-400 hover:text-white transition" title="선택 해제">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <div id="reason-picker-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/40 hidden">
+    <div class="bg-white rounded-[28px] shadow-2xl max-w-md w-full p-6 border border-slate-100 transition-all animate-pop">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2.5">
+          <div id="reason-picker-icon-box" class="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg shadow-sm">
+            ✨
+          </div>
+          <div>
+            <h3 id="reason-picker-title" class="font-extrabold text-slate-900 text-base">스티커 사유 선택</h3>
+            <p id="reason-picker-subtitle" class="text-[11px] text-slate-500 font-medium">선택된 1명에게 적용됩니다</p>
+          </div>
+        </div>
+        <button id="reason-picker-close" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="my-3">
+        <label class="block text-xs font-bold text-slate-700 mb-2">사유를 선택해주세요</label>
+        <div id="reason-picker-chips" class="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto custom-scrollbar p-1">
+          <!-- Injected via JS -->
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="block text-[11px] font-bold text-slate-600 mb-1.5">직접 사유 입력</label>
+        <div class="flex gap-2">
+          <input type="text" id="reason-picker-custom-input" placeholder="사유 직접 입력..." class="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 focus:bg-white">
+          <button id="btn-reason-picker-custom-apply" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition active:scale-95">
+            적용
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 modal-backdrop bg-slate-900/40 hidden">
+    <div class="bg-white rounded-[28px] shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100 transition-all transform animate-pop max-h-[92vh] flex flex-col">
+      <!-- Modal Header -->
+      <div id="modal-header-bg" class="px-6 py-4.5 bg-slate-900 text-white flex items-center justify-between transition-colors">
+        <div class="flex items-center gap-3">
+          <div id="modal-gem-icon-badge" class="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
+            💎
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 id="modal-student-name" class="text-lg font-extrabold tracking-tight">학생 이름</h3>
+              <div id="modal-star-badges" class="flex items-center text-amber-300 gap-1 text-xs font-bold"></div>
+            </div>
+            <p id="modal-gem-progress-text" class="text-xs text-white/80 font-medium">0 / 150 개 수집</p>
+          </div>
+        </div>
+        <button id="modal-close-btn" class="text-white/70 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Content Area -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 custom-scrollbar flex-1">
+        <!-- 150 Slots Interactive View -->
+        <div class="bg-[#F8F8FC] p-4 rounded-2xl border border-slate-200/80">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-700">개인 150개 보석판 현황</span>
+            <span id="modal-percent-label" class="text-xs font-extrabold text-indigo-600">0%</span>
+          </div>
+          <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden mb-3">
+            <div id="modal-progress-bar" class="h-full bg-indigo-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <div id="modal-gem-grid" class="grid grid-cols-10 sm:grid-cols-15 gap-1 p-2 bg-white rounded-xl border border-slate-200/70 max-h-52 overflow-y-auto custom-scrollbar">
+            <!-- 150 Gem cells injected -->
+          </div>
+        </div>
+
+        <!-- Goal Completion Box (150 Reached) -->
+        <div id="modal-goal-completed-box" class="hidden p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 text-amber-950 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-400 text-white flex items-center justify-center text-xl shadow-md shadow-amber-200">
+              🎉
+            </div>
+            <div>
+              <h4 class="text-xs font-black text-amber-950">150개 보석 목표 달성! 축하합니다!</h4>
+              <p class="text-[11px] text-amber-700">보상을 선물하고 새로운 보석판을 시작하세요.</p>
+            </div>
+          </div>
+          <button id="btn-claim-reward" class="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold rounded-xl shadow-md shadow-amber-200 transition active:scale-95 whitespace-nowrap">
+            보상 지급 & 새 판 열기 (★+1)
+          </button>
+        </div>
+
+        <!-- Reason Selection inside Modal -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">
+            칭찬 사유를 골라 보석 붙이기 ✨
+          </label>
+          <div class="grid grid-cols-4 gap-2" id="preset-reasons-container">
+            <!-- Reasons injected -->
+          </div>
+
+          <div class="mt-2.5 flex gap-2">
+            <input type="text" id="custom-reason-input" placeholder="직접 사유 입력 (예: 발표 열심히 참여)..." class="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 focus:bg-white">
+            <button id="btn-add-custom-reason" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition active:scale-95">
+              붙이기
+            </button>
+          </div>
+        </div>
+
+        <!-- Palette & Quick Undo -->
+        <div class="pt-3 border-t border-slate-200/80 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-slate-500">보석 색상:</span>
+            <div class="flex items-center gap-1.5" id="color-palette-buttons">
+              <!-- Colors -->
+            </div>
+          </div>
+          <button id="btn-undo-gem" class="text-xs text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl border border-rose-200 transition font-medium flex items-center gap-1 active:scale-95">
+            <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+            <span>스티커 1개 떼기</span>
+          </button>
+        </div>
+
+        <!-- Recent Logs -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-slate-700">최근 스티커 기록</span>
+            <span id="modal-log-count" class="text-[11px] text-slate-400">0건</span>
+          </div>
+          <div id="modal-logs-list" class="max-h-32 overflow-y-auto space-y-1.5 custom-scrollbar text-xs">
+            <!-- Logs injected -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <button id="btn-delete-student" class="text-xs text-slate-400 hover:text-rose-600 hover:underline flex items-center gap-1 transition">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>학생 삭제</span>
+        </button>
+        <button id="modal-done-btn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition">
+          확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="roster-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/40 hidden">
+    <div class="bg-white rounded-[28px] shadow-2xl max-w-md w-full p-6 border border-slate-100 transition-all animate-pop">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+            <i data-lucide="users" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-extrabold text-slate-900 text-base">학생 명단 관리</h3>
+        </div>
+        <button id="roster-modal-close" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 mb-3">
+        학생 이름을 줄바꿈이나 쉼표로 입력해주세요. (기존 학생은 유지되고 새로운 이름이 추가됩니다)
+      </p>
+
+      <textarea id="roster-input" rows="6" placeholder="김은지&#10;김채현&#10;김하랑..." class="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-sans resize-none custom-scrollbar"></textarea>
+
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button id="roster-modal-cancel" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+          취소
+        </button>
+        <button id="roster-modal-confirm" class="px-4 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow transition active:scale-95">
+          저장 및 추가
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/40 hidden">
+    <div class="bg-white rounded-[28px] shadow-2xl max-w-md w-full p-6 border border-slate-100 transition-all animate-pop max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between mb-4 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-extrabold text-slate-900 text-base">기본 설정 및 사유 관리</h3>
+        </div>
+        <button id="settings-modal-close" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs overflow-y-auto custom-scrollbar flex-1 pr-1">
+        <!-- Target Gem Count -->
+        <div>
+          <label class="block font-bold text-slate-700 mb-1.5">기본 목표 보석 개수</label>
+          <div class="flex items-center gap-2">
+            <input type="number" id="setting-target-input" value="150" min="10" max="300" class="w-28 px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-800">
+            <span class="text-slate-500">개</span>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1">변경 시 모든 학생의 목표 개수가 일괄 적용됩니다.</p>
+        </div>
+
+        <!-- Manage Preset Reasons -->
+        <div class="pt-3 border-t border-slate-100">
+          <label class="block font-bold text-slate-700 mb-2">칭찬 사유(+) 목록 설정</label>
+          <div id="setting-reasons-plus-list" class="flex flex-wrap gap-1.5 mb-2">
+            <!-- Badges -->
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="new-plus-reason-input" placeholder="새 칭찬 사유 (예: 수업 태도 우수)" class="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+            <button id="btn-add-plus-reason" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition">추가</button>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100">
+          <label class="block font-bold text-slate-700 mb-2">차감 사유(-) 목록 설정</label>
+          <div id="setting-reasons-minus-list" class="flex flex-wrap gap-1.5 mb-2">
+            <!-- Badges -->
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="new-minus-reason-input" placeholder="새 차감 사유 (예: 규칙 미준수)" class="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20">
+            <button id="btn-add-minus-reason" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition">추가</button>
+          </div>
+        </div>
+
+        <!-- Sound Toggle -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <div>
+            <span class="font-bold text-slate-700 block">효과음 켜기</span>
+            <span class="text-[11px] text-slate-400">보석 적립 및 팡파레 소리</span>
+          </div>
+          <button id="btn-toggle-sound" class="w-12 h-6 bg-indigo-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none relative">
+            <div id="sound-indicator" class="w-5 h-5 bg-white rounded-full shadow-md transform translate-x-6 transition-transform"></div>
+          </button>
+        </div>
+
+        <!-- Reset All -->
+        <div class="pt-3 border-t border-slate-100">
+          <button id="btn-reset-all" class="w-full py-2.5 text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl transition font-semibold flex items-center justify-center gap-1.5">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>모든 학생 보석 0개로 초기화</span>
+          </button>
+        </div>
+
+        <!-- Firebase Cloud Integration Setup Box -->
+        <div class="pt-3 border-t border-slate-100">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block font-bold text-slate-700">Firebase 클라우드 연동 정보</label>
+            <span id="settings-cloud-status" class="text-[11px] font-semibold text-slate-400">연결 대기중</span>
+          </div>
+          <p class="text-[11px] text-slate-500 mb-2 leading-relaxed">
+            구글 Firebase 콘솔의 웹 앱 설정값(<code class="bg-slate-100 px-1 py-0.5 rounded text-[10px] text-indigo-600 font-mono">firebaseConfig</code>)입니다.
+          </p>
+          <textarea id="setting-firebase-config-input" rows="4" placeholder='{&#10;  "apiKey": "AIzaSy...",&#10;  "authDomain": "...",&#10;  "projectId": "...",&#10;  "appId": "..."&#10;}' class="w-full p-2.5 text-[11px] font-mono rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none custom-scrollbar"></textarea>
+          <div class="mt-2 flex items-center justify-between">
+            <span id="firebase-test-msg" class="text-[11px] text-slate-500"></span>
+            <button type="button" id="btn-apply-firebase-config" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition active:scale-95 flex items-center gap-1">
+              <i data-lucide="cloud" class="w-3 h-3"></i>
+              <span>연동 및 저장</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end flex-shrink-0">
+        <button id="settings-modal-save" class="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow transition">
+          저장 완료
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="export-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/40 hidden">
+    <div class="bg-white rounded-[28px] shadow-2xl max-w-lg w-full p-6 border border-slate-100 transition-all animate-pop">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-extrabold text-slate-900 text-base">스프레드시트용 현황 복사</h3>
+        </div>
+        <button id="export-modal-close" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 mb-2">
+        엑셀(Excel) 또는 구글 스프레드시트에 바로 붙여넣기(Ctrl+V)할 수 있는 표 형식 데이터입니다.
+      </p>
+
+      <textarea id="export-preview-textarea" readonly rows="7" class="w-full p-3 text-xs bg-slate-50 rounded-xl border border-slate-200 text-slate-700 font-mono resize-none focus:outline-none custom-scrollbar"></textarea>
+
+      <div class="mt-4 flex items-center justify-between">
+        <span id="export-status-toast" class="text-xs text-emerald-600 font-bold opacity-0 transition-opacity">
+          복사되었습니다! ✨
+        </span>
+        <div class="flex gap-2">
+          <button id="export-modal-cancel" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            닫기
+          </button>
+          <button id="btn-do-copy" class="px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow transition active:scale-95 flex items-center gap-1.5">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>표 전체 복사</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/40 hidden">
+    <div class="bg-white rounded-[24px] shadow-2xl max-w-sm w-full p-6 border border-slate-100 transition-all animate-pop">
+      <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mb-3">
+        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+      </div>
+      <h4 id="confirm-modal-title" class="font-extrabold text-slate-900 text-base">확인</h4>
+      <p id="confirm-modal-msg" class="text-xs text-slate-500 mt-1 mb-5">정말 진행하시겠습니까?</p>
+      <div class="flex items-center justify-end gap-2">
+        <button id="confirm-modal-cancel-btn" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+          취소
+        </button>
+        <button id="confirm-modal-ok-btn" class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow transition active:scale-95">
+          확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithCustomToken, 
+      signInAnonymously 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      setDoc, 
+      deleteDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 사용자의 파이어베이스 프로젝트(pmpm-657ec) 설정값
+    const MY_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAF4jPziHgs2NzPLNiyu-eYjGmm5xzNxaM",
+      authDomain: "pmpm-657ec.firebaseapp.com",
+      projectId: "pmpm-657ec",
+      storageBucket: "pmpm-657ec.firebasestorage.app",
+      messagingSenderId: "314995184655",
+      appId: "1:314995184655:web:1b7ee04ef8065bfede3f7a"
+    };
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'gem-reward-board';
+    let firebaseConfig = MY_FIREBASE_CONFIG;
+
+    try {
+      if (typeof __firebase_config !== 'undefined') {
+        firebaseConfig = JSON.parse(__firebase_config);
+      } else {
+        const savedCustomConfig = localStorage.getItem('custom_gem_firebase_config');
+        if (savedCustomConfig) {
+          firebaseConfig = JSON.parse(savedCustomConfig);
+        }
+      }
+    } catch (e) {
+      console.warn("Firebase config parsing error:", e);
+    }
+
+    let app = null;
+    let auth = null;
+    let db = null;
+    let currentUser = null;
+    let isCloudConnected = false;
+
+    const THEMES = {
+      ruby: {
+        id: 'ruby',
+        name: '루비 레드',
+        fill: '#EF4444',
+        bar: 'bg-rose-500',
+        svg: `<svg viewBox="0 0 24 24" class="w-6 h-6 inline-block" fill="#EF4444"><polygon points="6,2 18,2 23,8 12,22 1,8" /></svg>`
+      },
+      sapphire: {
+        id: 'sapphire',
+        name: '사파이어 블루',
+        fill: '#3B82F6',
+        bar: 'bg-blue-500',
+        svg: `<svg viewBox="0 0 24 24" class="w-6 h-6 inline-block" fill="#3B82F6"><polygon points="6,2 18,2 23,8 12,22 1,8" /></svg>`
+      },
+      emerald: {
+        id: 'emerald',
+        name: '에메랄드 그린',
+        fill: '#10B981',
+        bar: 'bg-emerald-500',
+        svg: `<svg viewBox="0 0 24 24" class="w-6 h-6 inline-block" fill="#10B981"><polygon points="6,2 18,2 23,8 12,22 1,8" /></svg>`
+      },
+      amber: {
+        id: 'amber',
+        name: '토파즈 옐로',
+        fill: '#F59E0B',
+        bar: 'bg-amber-500',
+        svg: `<svg viewBox="0 0 24 24" class="w-6 h-6 inline-block" fill="#F59E0B"><polygon points="6,2 18,2 23,8 12,22 1,8" /></svg>`
+      },
+      amethyst: {
+        id: 'amethyst',
+        name: '자수정 퍼플',
+        fill: '#8B5CF6',
+        bar: 'bg-purple-500',
+        svg: `<svg viewBox="0 0 24 24" class="w-6 h-6 inline-block" fill="#8B5CF6"><polygon points="6,2 18,2 23,8 12,22 1,8" /></svg>`
+      }
+    };
+
+    const DEFAULT_STUDENTS = [
+      { name: '김은지', theme: 'ruby' },
+      { name: '김채현', theme: 'sapphire' },
+      { name: '김하랑', theme: 'emerald' },
+      { name: '김희지', theme: 'amber' },
+      { name: '명다솜', theme: 'amethyst' },
+      { name: '박도현', theme: 'ruby' },
+      { name: '설도현', theme: 'sapphire' },
+      { name: '유로운', theme: 'emerald' },
+      { name: '이서윤', theme: 'amber' },
+      { name: '이시훈', theme: 'amethyst' },
+      { name: '이형진', theme: 'ruby' },
+      { name: '조하윤', theme: 'sapphire' },
+      { name: '최시안', theme: 'emerald' }
+    ];
+
+    let plusReasons = [
+      { label: '숙제 성실', icon: '📝' },
+      { label: '멋진 발표', icon: '🎤' },
+      { label: '따뜻한 친절', icon: '💖' },
+      { label: '친구 돕기', icon: '🤝' },
+      { label: '정리정돈', icon: '✨' },
+      { label: '수업 집중', icon: '🎯' },
+      { label: '창의적 생각', icon: '💡' },
+      { label: '바른 인사', icon: '🙇' }
+    ];
+
+    let minusReasons = [
+      { label: '숙제 미제출', icon: '⚠️' },
+      { label: '수업 중 장난', icon: '🤫' },
+      { label: '정리 미흡', icon: '🧹' },
+      { label: '친구 배려 부족', icon: '💔' },
+      { label: '규칙 미준수', icon: '⏳' }
+    ];
+
+    let students = [];
+    let selectedStudentIds = new Set();
+    let globalTarget = 150;
+    let activeStudentId = null;
+    let soundEnabled = true;
+    let confirmCallback = null;
+
+    let reasonPickerContext = {
+      actionType: 'plus',
+      targetStudentIds: []
+    };
+
+    let synth = null;
+    function getSynth() {
+      if (!synth && typeof Tone !== 'undefined') {
+        try {
+          synth = new Tone.PolySynth(Tone.Synth).toDestination();
+          synth.volume.value = -8;
+        } catch (e) {
+          console.warn('Audio init error:', e);
+        }
+      }
+      return synth;
+    }
+
+    function playGemSfx(pitchOffset = 1) {
+      if (!soundEnabled) return;
+      try {
+        Tone.start();
+        const s = getSynth();
+        if (s) {
+          const notes = ["C5", "D5", "E5", "G5", "A5", "C6"];
+          const note = notes[pitchOffset % notes.length];
+          s.triggerAttackRelease(note, "16n");
+        }
+      } catch (e) {}
+    }
+
+    function playRemoveSfx() {
+      if (!soundEnabled) return;
+      try {
+        Tone.start();
+        const s = getSynth();
+        if (s) {
+          s.triggerAttackRelease("A3", "16n");
+        }
+      } catch (e) {}
+    }
+
+    function playRewardFanfare() {
+      if (!soundEnabled) return;
+      try {
+        Tone.start();
+        const s = getSynth();
+        if (s) {
+          const now = Tone.now();
+          s.triggerAttackRelease("C5", "8n", now);
+          s.triggerAttackRelease("E5", "8n", now + 0.12);
+          s.triggerAttackRelease("G5", "8n", now + 0.24);
+          s.triggerAttackRelease("C6", "4n", now + 0.36);
+        }
+      } catch (e) {}
+    }
+
+    async function setupFirebase() {
+      if (!firebaseConfig || !firebaseConfig.apiKey) {
+        console.info("파이어베이스 설정이 없어 로컬 세션 모드로 동작합니다.");
+        loadMockStudentsIfEmpty();
+        updateCloudStatusUI(false);
+        return;
+      }
+
+      try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Authenticate
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        currentUser = auth.currentUser;
+        if (!currentUser) throw new Error("인증 실패");
+
+        isCloudConnected = true;
+        updateCloudStatusUI(true, currentUser.uid);
+
+        // Students collection listener
+        const studentsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
+        onSnapshot(studentsColRef, (snapshot) => {
+          const cloudStudents = [];
+          snapshot.forEach(docSnap => {
+            cloudStudents.push({ id: docSnap.id, ...docSnap.data() });
+          });
+
+          if (cloudStudents.length > 0) {
+            cloudStudents.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            students = cloudStudents;
+          } else {
+            initDefaultStudentsToCloud();
+          }
+
+          renderCards();
+          if (activeStudentId) {
+            const active = students.find(s => s.id === activeStudentId);
+            if (active) renderDetailModal(active);
+          }
+        }, (err) => {
+          console.warn("Students snapshot error:", err);
+          updateCloudStatusUI(false);
+          loadMockStudentsIfEmpty();
+        });
+
+        // Config doc listener
+        const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'general');
+        onSnapshot(configDocRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.globalTarget) globalTarget = data.globalTarget;
+            if (Array.isArray(data.plusReasons) && data.plusReasons.length > 0) plusReasons = data.plusReasons;
+            if (Array.isArray(data.minusReasons) && data.minusReasons.length > 0) minusReasons = data.minusReasons;
+            renderCards();
+          }
+        }, (err) => {
+          console.warn("Config snapshot error:", err);
+        });
+
+      } catch (err) {
+        console.warn("Firebase 연결 실패, 오프라인 모드로 실행:", err);
+        isCloudConnected = false;
+        updateCloudStatusUI(false);
+        loadMockStudentsIfEmpty();
+      }
+    }
+
+    function updateCloudStatusUI(connected, uid = '') {
+      const badge = document.getElementById('cloud-status-badge');
+      const userTag = document.getElementById('cloud-user-tag');
+      const settingsStatus = document.getElementById('settings-cloud-status');
+
+      if (settingsStatus) {
+        settingsStatus.innerText = connected ? '연결됨 🟢' : '로컬 모드 ⚪';
+        settingsStatus.className = connected ? 'text-[11px] font-bold text-emerald-600' : 'text-[11px] font-semibold text-slate-400';
+      }
+
+      if (!badge) return;
+
+      if (connected) {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>클라우드 동기화 중</span>`;
+        badge.classList.remove('hidden');
+
+        if (userTag && uid) {
+          userTag.innerText = `ID: ${uid}`;
+          userTag.classList.remove('hidden');
+        }
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-slate-100 text-slate-600 border-slate-200";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span><span>로컬 모드</span>`;
+        badge.classList.remove('hidden');
+        if (userTag) userTag.classList.add('hidden');
+      }
+    }
+
+    async function initDefaultStudentsToCloud() {
+      const initial = DEFAULT_STUDENTS.map((item, idx) => ({
+        id: 'st_' + (idx + 1),
+        name: item.name,
+        gems: 0,
+        target: globalTarget,
+        rewards: 0,
+        theme: item.theme,
+        history: [],
+        order: idx
+      }));
+      students = initial;
+      renderCards();
+
+      for (const st of initial) {
+        await saveStudentToFirestore(st);
+      }
+      await saveConfigToFirestore();
+    }
+
+    function loadMockStudentsIfEmpty() {
+      if (students.length === 0) {
+        students = DEFAULT_STUDENTS.map((item, idx) => ({
+          id: 'local_' + (idx + 1),
+          name: item.name,
+          gems: 0,
+          target: globalTarget,
+          rewards: 0,
+          theme: item.theme,
+          history: [],
+          order: idx
+        }));
+        renderCards();
+      }
+    }
+
+    async function saveStudentToFirestore(student) {
+      const idx = students.findIndex(s => s.id === student.id);
+      if (idx >= 0) students[idx] = student;
+      else students.push(student);
+
+      if (!isCloudConnected || !currentUser || !db) {
+        renderCards();
+        return;
+      }
+      try {
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'students', student.id);
+        await setDoc(ref, student, { merge: true });
+      } catch (e) {
+        console.error("Firestore save error:", e);
+      }
+    }
+
+    async function deleteStudentFromFirestore(studentId) {
+      students = students.filter(s => s.id !== studentId);
+
+      if (!isCloudConnected || !currentUser || !db) {
+        renderCards();
+        return;
+      }
+      try {
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'students', studentId);
+        await deleteDoc(ref);
+      } catch (e) {
+        console.error("Firestore delete error:", e);
+      }
+    }
+
+    async function saveConfigToFirestore() {
+      if (!isCloudConnected || !currentUser || !db) return;
+      try {
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'general');
+        await setDoc(ref, {
+          globalTarget,
+          plusReasons,
+          minusReasons,
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch (e) {
+        console.error("Config save error:", e);
+      }
+    }
+
+    function renderCards() {
+      const grid = document.getElementById('students-grid');
+      const emptyState = document.getElementById('empty-state');
+
+      if (students.length === 0) {
+        grid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        updateFloatingBar();
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      grid.classList.remove('hidden');
+      grid.innerHTML = '';
+
+      students.forEach(student => {
+        const theme = THEMES[student.theme] || THEMES.ruby;
+        const target = student.target || globalTarget;
+        const percent = Math.min(100, Math.round((student.gems / target) * 100));
+        const isSelected = selectedStudentIds.has(student.id);
+
+        const card = document.createElement('div');
+        card.className = `student-card bg-white rounded-[26px] p-5 sm:p-5.5 flex flex-col justify-between cursor-pointer border transition-all ${
+          isSelected 
+            ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20' 
+            : 'border-slate-100/80 hover:border-slate-200'
+        }`;
+
+        const topRow = document.createElement('div');
+        topRow.className = "flex items-center justify-between gap-2 mb-3.5";
+
+        const nameWrap = document.createElement('div');
+        nameWrap.className = "flex items-center gap-2 min-w-0";
+        nameWrap.innerHTML = `
+          <button type="button" class="btn-card-check flex-shrink-0 w-5 h-5 rounded-lg border transition-all flex items-center justify-center ${
+            isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-400 bg-white text-transparent'
+          }">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+          </button>
+          <span class="flex-shrink-0 flex items-center justify-center">${theme.svg}</span>
+          <span class="font-extrabold text-[17px] sm:text-[18px] text-[#1D2138] tracking-tight truncate">${student.name}</span>
+          ${student.rewards > 0 ? `<span class="text-amber-500 font-bold text-xs bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200 flex-shrink-0">★${student.rewards}</span>` : ''}
+        `;
+
+        const btnWrap = document.createElement('div');
+        btnWrap.className = "flex items-center gap-1.5 flex-shrink-0";
+        btnWrap.innerHTML = `
+          <button class="btn-minus quick-btn w-8 h-8 rounded-full bg-[#EBE9F5] hover:bg-[#DDD9EE] text-[#444662] flex items-center justify-center font-bold text-base transition" title="이유 선택 후 1개 빼기">
+            -
+          </button>
+          <button class="btn-plus quick-btn w-8 h-8 rounded-full bg-[#EBE9F5] hover:bg-[#DDD9EE] text-[#444662] flex items-center justify-center font-bold text-base transition" title="이유 선택 후 1개 더하기">
+            +
+          </button>
+        `;
+
+        topRow.appendChild(nameWrap);
+        topRow.appendChild(btnWrap);
+
+        const barWrap = document.createElement('div');
+        barWrap.className = "w-full bg-[#ECEAF4] h-2.5 rounded-full overflow-hidden mb-3";
+        barWrap.innerHTML = `
+          <div class="h-full ${theme.bar} rounded-full transition-all duration-300" style="width: ${percent}%;"></div>
+        `;
+
+        const bottomRow = document.createElement('div');
+        bottomRow.className = "flex items-center justify-between";
+        bottomRow.innerHTML = `
+          <span class="font-extrabold text-[15px] sm:text-[16px] text-[#1D2138] tracking-tight">
+            ${student.gems} / ${target}
+          </span>
+          ${percent >= 100 ? `<span class="text-[11px] font-extrabold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full animate-bounce">목표 달성! 🎁</span>` : ''}
+        `;
+
+        card.appendChild(topRow);
+        card.appendChild(barWrap);
+        card.appendChild(bottomRow);
+
+        nameWrap.querySelector('.btn-card-check').addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleStudentSelection(student.id);
+        });
+
+        card.addEventListener('click', () => {
+          openDetailModal(student.id);
+        });
+
+        card.querySelector('.btn-minus').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openReasonPicker('minus', [student.id]);
+        });
+
+        card.querySelector('.btn-plus').addEventListener('click', (e) => {
+          e.stopPropagation();
+          openReasonPicker('plus', [student.id]);
+        });
+
+        grid.appendChild(card);
+      });
+
+      updateFloatingBar();
+      lucide.createIcons();
+    }
+
+    function toggleStudentSelection(id) {
+      if (selectedStudentIds.has(id)) {
+        selectedStudentIds.delete(id);
+      } else {
+        selectedStudentIds.add(id);
+      }
+      renderCards();
+    }
+
+    function updateFloatingBar() {
+      const bar = document.getElementById('floating-action-bar');
+      const badge = document.getElementById('selected-count-badge');
+      const selectAllText = document.getElementById('btn-select-all-text');
+      const count = selectedStudentIds.size;
+
+      badge.innerText = count;
+
+      if (count > 0) {
+        bar.classList.remove('translate-y-28', 'opacity-0', 'pointer-events-none');
+        bar.classList.add('translate-y-0', 'opacity-100');
+      } else {
+        bar.classList.add('translate-y-28', 'opacity-0', 'pointer-events-none');
+        bar.classList.remove('translate-y-0', 'opacity-100');
+      }
+
+      if (students.length > 0 && count === students.length) {
+        selectAllText.innerText = "선택 해제";
+      } else {
+        selectAllText.innerText = "전체 선택";
+      }
+    }
+
+    function openReasonPicker(actionType, targetStudentIds) {
+      if (!targetStudentIds || targetStudentIds.length === 0) return;
+
+      reasonPickerContext.actionType = actionType;
+      reasonPickerContext.targetStudentIds = targetStudentIds;
+
+      const modal = document.getElementById('reason-picker-modal');
+      const title = document.getElementById('reason-picker-title');
+      const subtitle = document.getElementById('reason-picker-subtitle');
+      const iconBox = document.getElementById('reason-picker-icon-box');
+      const chipsContainer = document.getElementById('reason-picker-chips');
+      const customInput = document.getElementById('reason-picker-custom-input');
+
+      customInput.value = '';
+
+      const count = targetStudentIds.length;
+      let namesText = '';
+      if (count === 1) {
+        const s = students.find(item => item.id === targetStudentIds[0]);
+        namesText = s ? `'${s.name}' 학생` : '선택된 학생';
+      } else {
+        namesText = `${count}명의 학생들`;
+      }
+
+      if (actionType === 'plus') {
+        title.innerText = "칭찬 보석 스티커 주기 (+)";
+        subtitle.innerText = `${namesText}에게 붙일 이유를 선택하세요.`;
+        iconBox.innerHTML = "💎";
+        iconBox.className = "w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg shadow-sm";
+      } else {
+        title.innerText = "보석 스티커 차감하기 (-)";
+        subtitle.innerText = `${namesText}에게서 뗄 이유를 선택하세요.`;
+        iconBox.innerHTML = "⚠️";
+        iconBox.className = "w-9 h-9 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-lg shadow-sm";
+      }
+
+      chipsContainer.innerHTML = '';
+      const reasonList = actionType === 'plus' ? plusReasons : minusReasons;
+
+      reasonList.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = `p-2.5 rounded-xl text-xs font-semibold border flex items-center gap-2 transition active:scale-95 text-left ${
+          actionType === 'plus'
+            ? 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 text-slate-700'
+            : 'border-slate-200 hover:border-rose-400 hover:bg-rose-50/50 text-slate-700'
+        }`;
+        btn.innerHTML = `
+          <span class="text-base">${item.icon}</span>
+          <span class="truncate">${item.label}</span>
+        `;
+        btn.addEventListener('click', async () => {
+          await executeReasonAction(`${item.label} ${item.icon}`);
+          modal.classList.add('hidden');
+        });
+        chipsContainer.appendChild(btn);
+      });
+
+      modal.classList.remove('hidden');
+    }
+
+    async function executeReasonAction(reasonText) {
+      const { actionType, targetStudentIds } = reasonPickerContext;
+      if (!targetStudentIds || targetStudentIds.length === 0) return;
+
+      let anyGoalReached = false;
+
+      for (const id of targetStudentIds) {
+        const student = students.find(s => s.id === id);
+        if (!student) continue;
+
+        const target = student.target || globalTarget;
+
+        if (actionType === 'plus') {
+          if (student.gems < target) {
+            student.gems += 1;
+            student.history.unshift({
+              timestamp: Date.now(),
+              reason: reasonText
+            });
+            if (student.history.length > 50) student.history.pop();
+
+            if (student.gems >= target) {
+              anyGoalReached = true;
+            }
+          }
+        } else {
+          if (student.gems > 0) {
+            student.gems -= 1;
+            student.history.unshift({
+              timestamp: Date.now(),
+              reason: `[차감] ${reasonText}`
+            });
+            if (student.history.length > 50) student.history.pop();
+          }
+        }
+
+        await saveStudentToFirestore(student);
+      }
+
+      if (actionType === 'plus') {
+        playGemSfx(targetStudentIds.length);
+        if (anyGoalReached) {
+          showCelebrationConfetti();
+          playRewardFanfare();
+        }
+      } else {
+        playRemoveSfx();
+      }
+
+      if (activeStudentId && targetStudentIds.includes(activeStudentId)) {
+        const cur = students.find(s => s.id === activeStudentId);
+        if (cur) renderDetailModal(cur);
+      }
+
+      selectedStudentIds.clear();
+      renderCards();
+    }
+
+    function renderSettingsReasonsList() {
+      const plusContainer = document.getElementById('setting-reasons-plus-list');
+      const minusContainer = document.getElementById('setting-reasons-minus-list');
+
+      plusContainer.innerHTML = '';
+      plusReasons.forEach((item, idx) => {
+        const badge = document.createElement('span');
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-medium text-xs border border-indigo-100";
+        badge.innerHTML = `
+          <span>${item.icon} ${item.label}</span>
+          <button type="button" class="text-indigo-400 hover:text-rose-600 font-bold ml-1">&times;</button>
+        `;
+        badge.querySelector('button').addEventListener('click', () => {
+          plusReasons.splice(idx, 1);
+          renderSettingsReasonsList();
+        });
+        plusContainer.appendChild(badge);
+      });
+
+      minusContainer.innerHTML = '';
+      minusReasons.forEach((item, idx) => {
+        const badge = document.createElement('span');
+        badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-medium text-xs border border-rose-100";
+        badge.innerHTML = `
+          <span>${item.icon} ${item.label}</span>
+          <button type="button" class="text-rose-400 hover:text-rose-600 font-bold ml-1">&times;</button>
+        `;
+        badge.querySelector('button').addEventListener('click', () => {
+          minusReasons.splice(idx, 1);
+          renderSettingsReasonsList();
+        });
+        minusContainer.appendChild(badge);
+      });
+    }
+
+    function showCelebrationConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        setTimeout(() => {
+          confetti({
+            particleCount: 50,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 50,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+          });
+        }, 250);
+      }
+    }
+
+    function openDetailModal(studentId) {
+      activeStudentId = studentId;
+      const student = students.find(s => s.id === studentId);
+      if (!student) return;
+
+      renderDetailModal(student);
+      document.getElementById('detail-modal').classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+      activeStudentId = null;
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    function renderDetailModal(student) {
+      const theme = THEMES[student.theme] || THEMES.ruby;
+      const target = student.target || globalTarget;
+      const percent = Math.min(100, Math.round((student.gems / target) * 100));
+
+      document.getElementById('modal-student-name').innerText = student.name;
+      document.getElementById('modal-gem-progress-text').innerText = `${student.gems} / ${target} 개 수집 (${percent}%)`;
+      document.getElementById('modal-gem-icon-badge').innerHTML = theme.svg;
+
+      const starBox = document.getElementById('modal-star-badges');
+      starBox.innerHTML = student.rewards > 0 ? `★ × ${student.rewards}회 달성` : '';
+
+      document.getElementById('modal-percent-label').innerText = `${percent}% 완료`;
+      const pBar = document.getElementById('modal-progress-bar');
+      pBar.style.width = `${percent}%`;
+      pBar.className = `h-full ${theme.bar} rounded-full transition-all duration-300`;
+
+      // 150 Gem Grid
+      const gemGrid = document.getElementById('modal-gem-grid');
+      gemGrid.innerHTML = '';
+      for (let i = 0; i < target; i++) {
+        const isFilled = i < student.gems;
+        const cell = document.createElement('div');
+        cell.className = `aspect-square rounded-md flex items-center justify-center text-[10px] font-bold transition-all ${
+          isFilled 
+            ? `${theme.bar} text-white shadow-xs` 
+            : 'bg-slate-50 border border-slate-200 text-slate-300 hover:bg-slate-100'
+        }`;
+        if (isFilled) {
+          cell.innerHTML = `<span class="text-[9px]">💎</span>`;
+        } else {
+          cell.innerText = `${i + 1}`;
+        }
+        gemGrid.appendChild(cell);
+      }
+
+      // 150 Goal box
+      const goalBox = document.getElementById('modal-goal-completed-box');
+      if (student.gems >= target) {
+        goalBox.classList.remove('hidden');
+      } else {
+        goalBox.classList.add('hidden');
+      }
+
+      // Reason chips inside modal
+      const presetContainer = document.getElementById('preset-reasons-container');
+      presetContainer.innerHTML = '';
+      plusReasons.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = "p-2 rounded-xl text-xs font-medium border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition flex flex-col items-center justify-center gap-1 active:scale-95";
+        btn.innerHTML = `
+          <span class="text-base">${item.icon}</span>
+          <span class="text-slate-700 text-[11px] font-semibold">${item.label}</span>
+        `;
+        btn.addEventListener('click', async () => {
+          await addGemWithReason(student.id, `${item.label} ${item.icon}`);
+        });
+        presetContainer.appendChild(btn);
+      });
+
+      // Palette
+      const palette = document.getElementById('color-palette-buttons');
+      palette.innerHTML = '';
+      Object.keys(THEMES).forEach(k => {
+        const t = THEMES[k];
+        const cBtn = document.createElement('button');
+        cBtn.className = `w-6 h-6 rounded-full flex items-center justify-center transition-transform ${student.theme === k ? 'ring-2 ring-offset-2 ring-slate-800 scale-110' : 'hover:scale-105 opacity-80'}`;
+        cBtn.style.backgroundColor = t.fill;
+        cBtn.title = t.name;
+        cBtn.addEventListener('click', async () => {
+          student.theme = k;
+          await saveStudentToFirestore(student);
+          renderDetailModal(student);
+        });
+        palette.appendChild(cBtn);
+      });
+
+      // History logs
+      const logsList = document.getElementById('modal-logs-list');
+      const logCount = document.getElementById('modal-log-count');
+      logsList.innerHTML = '';
+      const history = student.history || [];
+      logCount.innerText = `${history.length}건`;
+
+      if (history.length === 0) {
+        logsList.innerHTML = `<div class="text-slate-400 text-center py-3">아직 스티커 기록이 없습니다.</div>`;
+      } else {
+        history.forEach(h => {
+          const d = new Date(h.timestamp);
+          const time = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          const row = document.createElement('div');
+          row.className = "flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 text-slate-700";
+          row.innerHTML = `
+            <span class="font-medium truncate mr-2">${h.reason}</span>
+            <span class="text-[10px] text-slate-400 font-mono flex-shrink-0">${time}</span>
+          `;
+          logsList.appendChild(row);
+        });
+      }
+
+      lucide.createIcons();
+    }
+
+    async function addGemWithReason(studentId, reason) {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return;
+
+      const target = student.target || globalTarget;
+      if (student.gems >= target) {
+        showCelebrationConfetti();
+        return;
+      }
+
+      student.gems += 1;
+      student.history.unshift({
+        timestamp: Date.now(),
+        reason: reason
+      });
+      if (student.history.length > 50) student.history.pop();
+
+      playGemSfx(student.gems);
+
+      if (student.gems >= target) {
+        showCelebrationConfetti();
+        playRewardFanfare();
+      }
+
+      await saveStudentToFirestore(student);
+      renderDetailModal(student);
+    }
+
+    async function claimRewardAndReset(studentId) {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return;
+
+      student.rewards = (student.rewards || 0) + 1;
+      student.gems = 0;
+      student.history.unshift({
+        timestamp: Date.now(),
+        reason: `🏆 보상 완료 (${student.rewards}번째 보석판 달성!)`
+      });
+
+      showCelebrationConfetti();
+      playRewardFanfare();
+
+      await saveStudentToFirestore(student);
+      renderDetailModal(student);
+    }
+
+    function showCustomConfirm(title, message, onConfirm) {
+      const modal = document.getElementById('confirm-modal');
+      document.getElementById('confirm-modal-title').innerText = title;
+      document.getElementById('confirm-modal-msg').innerText = message;
+      confirmCallback = onConfirm;
+      modal.classList.remove('hidden');
+    }
+
+    function closeCustomConfirm() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      confirmCallback = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupFirebase();
+
+      // Select All Toggle
+      document.getElementById('btn-select-all').addEventListener('click', () => {
+        if (selectedStudentIds.size === students.length && students.length > 0) {
+          selectedStudentIds.clear();
+        } else {
+          selectedStudentIds = new Set(students.map(s => s.id));
+        }
+        renderCards();
+      });
+
+      // Floating Actions
+      document.getElementById('btn-batch-plus').addEventListener('click', () => {
+        const ids = Array.from(selectedStudentIds);
+        if (ids.length === 0) return;
+        openReasonPicker('plus', ids);
+      });
+
+      document.getElementById('btn-batch-minus').addEventListener('click', () => {
+        const ids = Array.from(selectedStudentIds);
+        if (ids.length === 0) return;
+        openReasonPicker('minus', ids);
+      });
+
+      document.getElementById('btn-batch-cancel').addEventListener('click', () => {
+        selectedStudentIds.clear();
+        renderCards();
+      });
+
+      // Reason Picker Dialog
+      const reasonModal = document.getElementById('reason-picker-modal');
+      document.getElementById('reason-picker-close').addEventListener('click', () => {
+        reasonModal.classList.add('hidden');
+      });
+
+      const applyCustomReason = async () => {
+        const input = document.getElementById('reason-picker-custom-input');
+        const text = input.value.trim();
+        if (!text) return;
+        const icon = reasonPickerContext.actionType === 'plus' ? '🌟' : '⚠️';
+        await executeReasonAction(`${text} ${icon}`);
+        reasonModal.classList.add('hidden');
+      };
+
+      document.getElementById('btn-reason-picker-custom-apply').addEventListener('click', applyCustomReason);
+      document.getElementById('reason-picker-custom-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyCustomReason();
+        }
+      });
+
+      // Roster Management Modal
+      const rosterModal = document.getElementById('roster-modal');
+      const rosterInput = document.getElementById('roster-input');
+
+      document.getElementById('btn-open-roster-modal').addEventListener('click', () => {
+        rosterInput.value = students.map(s => s.name).join('\n');
+        rosterModal.classList.remove('hidden');
+        rosterInput.focus();
+      });
+      document.getElementById('btn-empty-add').addEventListener('click', () => {
+        rosterInput.value = '';
+        rosterModal.classList.remove('hidden');
+        rosterInput.focus();
+      });
+      document.getElementById('roster-modal-close').addEventListener('click', () => rosterModal.classList.add('hidden'));
+      document.getElementById('roster-modal-cancel').addEventListener('click', () => rosterModal.classList.add('hidden'));
+
+      document.getElementById('roster-modal-confirm').addEventListener('click', async () => {
+        const lines = rosterInput.value
+          .split(/[\n,]+/)
+          .map(n => n.trim())
+          .filter(n => n.length > 0);
+
+        if (lines.length > 0) {
+          const themeKeys = Object.keys(THEMES);
+          for (let i = 0; i < lines.length; i++) {
+            const name = lines[i];
+            const existing = students.find(s => s.name === name);
+            if (!existing) {
+              const newSt = {
+                id: 'st_' + Date.now() + '_' + i,
+                name: name,
+                gems: 0,
+                target: globalTarget,
+                rewards: 0,
+                theme: themeKeys[i % themeKeys.length],
+                history: [],
+                order: students.length + i
+              };
+              await saveStudentToFirestore(newSt);
+            }
+          }
+        }
+        rosterModal.classList.add('hidden');
+      });
+
+      // Settings Modal
+      const settingsModal = document.getElementById('settings-modal');
+      document.getElementById('btn-open-settings-modal').addEventListener('click', () => {
+        document.getElementById('setting-target-input').value = globalTarget;
+        renderSettingsReasonsList();
+
+        const configInput = document.getElementById('setting-firebase-config-input');
+        if (firebaseConfig) {
+          configInput.value = JSON.stringify(firebaseConfig, null, 2);
+        } else {
+          configInput.value = '';
+        }
+        document.getElementById('firebase-test-msg').innerText = '';
+        settingsModal.classList.remove('hidden');
+      });
+      document.getElementById('settings-modal-close').addEventListener('click', () => settingsModal.classList.add('hidden'));
+
+      document.getElementById('btn-apply-firebase-config').addEventListener('click', async () => {
+        const inputArea = document.getElementById('setting-firebase-config-input');
+        const testMsg = document.getElementById('firebase-test-msg');
+        const rawText = inputArea.value.trim();
+
+        if (!rawText) {
+          testMsg.className = "text-[11px] text-rose-500 font-semibold";
+          testMsg.innerText = "설정값을 입력해주세요.";
+          return;
+        }
+
+        try {
+          let parsed = null;
+          if (rawText.startsWith('{')) {
+            parsed = JSON.parse(rawText);
+          } else {
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const evalSafe = new Function(`return ${jsonMatch[0]};`);
+              parsed = evalSafe();
+            } else {
+              throw new Error("올바른 설정 객체 형식이 아닙니다.");
+            }
+          }
+
+          if (!parsed.apiKey || !parsed.projectId) {
+            throw new Error("apiKey 또는 projectId가 누락되었습니다.");
+          }
+
+          firebaseConfig = parsed;
+          localStorage.setItem('custom_gem_firebase_config', JSON.stringify(parsed));
+
+          testMsg.className = "text-[11px] text-indigo-600 font-semibold";
+          testMsg.innerText = "연결 중...";
+
+          await setupFirebase();
+
+          if (isCloudConnected) {
+            testMsg.className = "text-[11px] text-emerald-600 font-bold";
+            testMsg.innerText = "연동 성공! 실시간 동기화 중 ✨";
+          } else {
+            testMsg.className = "text-[11px] text-rose-500 font-semibold";
+            testMsg.innerText = "연결 실패: Authentication 설정을 확인하세요.";
+          }
+        } catch (err) {
+          testMsg.className = "text-[11px] text-rose-500 font-semibold";
+          testMsg.innerText = "형식 오류: " + err.message;
+        }
+      });
+
+      document.getElementById('btn-add-plus-reason').addEventListener('click', () => {
+        const input = document.getElementById('new-plus-reason-input');
+        const val = input.value.trim();
+        if (val) {
+          plusReasons.push({ label: val, icon: '✨' });
+          input.value = '';
+          renderSettingsReasonsList();
+        }
+      });
+
+      document.getElementById('btn-add-minus-reason').addEventListener('click', () => {
+        const input = document.getElementById('new-minus-reason-input');
+        const val = input.value.trim();
+        if (val) {
+          minusReasons.push({ label: val, icon: '⚠️' });
+          input.value = '';
+          renderSettingsReasonsList();
+        }
+      });
+
+      document.getElementById('settings-modal-save').addEventListener('click', async () => {
+        const val = parseInt(document.getElementById('setting-target-input').value, 10);
+        if (!isNaN(val) && val > 0) {
+          globalTarget = val;
+          for (let s of students) {
+            s.target = val;
+            await saveStudentToFirestore(s);
+          }
+        }
+        await saveConfigToFirestore();
+        settingsModal.classList.add('hidden');
+      });
+
+      // Sound Toggle
+      const soundToggleBtn = document.getElementById('btn-toggle-sound');
+      const soundInd = document.getElementById('sound-indicator');
+      soundToggleBtn.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) {
+          soundToggleBtn.className = "w-12 h-6 bg-indigo-600 rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none relative";
+          soundInd.className = "w-5 h-5 bg-white rounded-full shadow-md transform translate-x-6 transition-transform";
+        } else {
+          soundToggleBtn.className = "w-12 h-6 bg-slate-300 rounded-full p-0.5 transition-colors duration-200 ease-in-out focus:outline-none relative";
+          soundInd.className = "w-5 h-5 bg-white rounded-full shadow-md transform translate-x-0 transition-transform";
+        }
+      });
+
+      // Reset All
+      document.getElementById('btn-reset-all').addEventListener('click', () => {
+        showCustomConfirm(
+          '전체 초기화',
+          '모든 학생의 보석 수를 0개로 되돌리시겠습니까? (보상 횟수★는 유지됩니다)',
+          async () => {
+            for (let s of students) {
+              s.gems = 0;
+              await saveStudentToFirestore(s);
+            }
+            settingsModal.classList.add('hidden');
+          }
+        );
+      });
+
+      // Export to Clipboard
+      const exportModal = document.getElementById('export-modal');
+      const exportArea = document.getElementById('export-preview-textarea');
+      const copyToast = document.getElementById('export-status-toast');
+
+      document.getElementById('btn-export-modal').addEventListener('click', () => {
+        let tsv = "학생 이름\t현재 보석\t목표\t달성률\t보상 횟수(★)\t최근 칭찬 사유\n";
+        students.forEach(s => {
+          const target = s.target || globalTarget;
+          const pct = Math.round((s.gems / target) * 100) + '%';
+          const lastReason = s.history && s.history[0] ? s.history[0].reason : '-';
+          tsv += `${s.name}\t${s.gems}\t${target}\t${pct}\t${s.rewards}\t${lastReason}\n`;
+        });
+        exportArea.value = tsv;
+        copyToast.classList.add('opacity-0');
+        exportModal.classList.remove('hidden');
+      });
+
+      document.getElementById('export-modal-close').addEventListener('click', () => exportModal.classList.add('hidden'));
+      document.getElementById('export-modal-cancel').addEventListener('click', () => exportModal.classList.add('hidden'));
+
+      document.getElementById('btn-do-copy').addEventListener('click', () => {
+        exportArea.select();
+        try {
+          document.execCommand('copy');
+          copyToast.classList.remove('opacity-0');
+          setTimeout(() => copyToast.classList.add('opacity-0'), 2500);
+        } catch (e) {
+          console.warn('Copy error:', e);
+        }
+      });
+
+      // Detail Modal Events
+      document.getElementById('modal-close-btn').addEventListener('click', closeDetailModal);
+      document.getElementById('modal-done-btn').addEventListener('click', closeDetailModal);
+
+      document.getElementById('btn-undo-gem').addEventListener('click', () => {
+        if (!activeStudentId) return;
+        openReasonPicker('minus', [activeStudentId]);
+      });
+
+      document.getElementById('btn-claim-reward').addEventListener('click', () => {
+        if (!activeStudentId) return;
+        claimRewardAndReset(activeStudentId);
+      });
+
+      document.getElementById('btn-add-custom-reason').addEventListener('click', () => {
+        const input = document.getElementById('custom-reason-input');
+        const reason = input.value.trim();
+        if (!reason || !activeStudentId) return;
+        addGemWithReason(activeStudentId, `${reason} 🌟`);
+        input.value = '';
+      });
+
+      document.getElementById('custom-reason-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('btn-add-custom-reason').click();
+        }
+      });
+
+      document.getElementById('btn-delete-student').addEventListener('click', () => {
+        if (!activeStudentId) return;
+        const s = students.find(st => st.id === activeStudentId);
+        if (!s) return;
+        showCustomConfirm(
+          '학생 삭제',
+          `'${s.name}' 학생의 모든 보석 데이터가 삭제됩니다. 계속할까요?`,
+          async () => {
+            const id = activeStudentId;
+            closeDetailModal();
+            await deleteStudentFromFirestore(id);
+          }
+        );
+      });
+
+      // Custom Confirm Dialog
+      document.getElementById('confirm-modal-ok-btn').addEventListener('click', () => {
+        if (typeof confirmCallback === 'function') confirmCallback();
+        closeCustomConfirm();
+      });
+      document.getElementById('confirm-modal-cancel-btn').addEventListener('click', closeCustomConfirm);
+
+      // Keyboard Esc to Close Modals
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeDetailModal();
+          rosterModal.classList.add('hidden');
+          settingsModal.classList.add('hidden');
+          exportModal.classList.add('hidden');
+          document.getElementById('reason-picker-modal').classList.add('hidden');
+          closeCustomConfirm();
+        }
+      });
+
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
