@@ -183,6 +183,21 @@
       </div>
 
       <div class="mt-3">
+        <label class="block text-[11px] font-bold text-slate-600 mb-1.5">개수 선택</label>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button type="button" data-amt="1"  class="amt-chip px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">1</button>
+          <button type="button" data-amt="3"  class="amt-chip px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">3</button>
+          <button type="button" data-amt="5"  class="amt-chip px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">5</button>
+          <button type="button" data-amt="10" class="amt-chip px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 transition">10</button>
+          <div class="flex items-center gap-1 ml-auto">
+            <input type="number" id="reason-picker-amount" value="1" min="1" max="300" class="w-20 px-3 py-1.5 text-xs text-center rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold">
+            <span class="text-xs text-slate-500">개</span>
+          </div>
+        </div>
+        <p class="text-[10px] text-slate-400 mt-1.5">숫자를 직접 입력하거나 위 버튼을 눌러 개수를 지정하세요.</p>
+      </div>
+
+      <div class="mt-3">
         <label class="block text-[11px] font-bold text-slate-600 mb-1.5">직접 사유 입력</label>
         <div class="flex gap-2">
           <input type="text" id="reason-picker-custom-input" placeholder="사유 직접 입력..." class="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 focus:bg-white">
@@ -256,8 +271,12 @@
             <!-- Reasons injected -->
           </div>
 
-          <div class="mt-2.5 flex gap-2">
+          <div class="mt-2.5 flex gap-2 items-center">
             <input type="text" id="custom-reason-input" placeholder="직접 사유 입력 (예: 발표 열심히 참여)..." class="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 focus:bg-white">
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <input type="number" id="custom-reason-amount" value="1" min="1" max="300" class="w-16 px-2 py-2 text-xs text-center rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold">
+              <span class="text-[11px] text-slate-500">개</span>
+            </div>
             <button id="btn-add-custom-reason" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition active:scale-95">
               붙이기
             </button>
@@ -1007,6 +1026,32 @@
 
       customInput.value = '';
 
+      // 개수 입력 초기화 및 프리셋 버튼 바인딩
+      const amountInput = document.getElementById('reason-picker-amount');
+      if (amountInput) amountInput.value = 1;
+      modal.querySelectorAll('.amt-chip').forEach(b => {
+        b.onclick = () => {
+          if (amountInput) amountInput.value = b.dataset.amt;
+          // 선택된 칩 시각 피드백
+          modal.querySelectorAll('.amt-chip').forEach(x => {
+            x.classList.remove('bg-indigo-100','border-indigo-400','text-indigo-700');
+            x.classList.add('bg-slate-50','border-slate-200');
+          });
+          b.classList.remove('bg-slate-50','border-slate-200');
+          b.classList.add('bg-indigo-100','border-indigo-400','text-indigo-700');
+        };
+      });
+      // 기본 1 칩을 활성화 상태로 표시
+      const defaultChip = modal.querySelector('.amt-chip[data-amt="1"]');
+      modal.querySelectorAll('.amt-chip').forEach(x => {
+        x.classList.remove('bg-indigo-100','border-indigo-400','text-indigo-700');
+        x.classList.add('bg-slate-50','border-slate-200');
+      });
+      if (defaultChip) {
+        defaultChip.classList.remove('bg-slate-50','border-slate-200');
+        defaultChip.classList.add('bg-indigo-100','border-indigo-400','text-indigo-700');
+      }
+
       const count = targetStudentIds.length;
       let namesText = '';
       if (count === 1) {
@@ -1052,9 +1097,25 @@
       modal.classList.remove('hidden');
     }
 
+    // 사유를 미리 지정한 상태로 사유 선택 모달을 연다 (상세 모달 내 사유 칩에서 사용)
+    function openReasonPickerPrefilled(actionType, targetStudentIds, prefilledReason) {
+      openReasonPicker(actionType, targetStudentIds);
+      // 모달을 연 다음 사유를 직접 입력란에 넣어 두어, "적용" 버튼으로 지정한 개수만큼 반영되도록 한다
+      const customInput = document.getElementById('reason-picker-custom-input');
+      if (customInput && prefilledReason) {
+        customInput.value = prefilledReason.replace(/\s*[\p{Emoji_Presentation}\p{Extended_Pictographic}]\s*$/u, '').trim();
+      }
+    }
+
     async function executeReasonAction(reasonText) {
       const { actionType, targetStudentIds } = reasonPickerContext;
       if (!targetStudentIds || targetStudentIds.length === 0) return;
+
+      // 사유 선택 모달에서 지정한 개수를 가져온다
+      const amtInput = document.getElementById('reason-picker-amount');
+      let amount = parseInt(amtInput ? amtInput.value : '1', 10);
+      if (isNaN(amount) || amount < 1) amount = 1;
+      if (amount > 300) amount = 300;
 
       let anyGoalReached = false;
 
@@ -1066,10 +1127,14 @@
 
         if (actionType === 'plus') {
           if (student.gems < target) {
-            student.gems += 1;
+            // 목표를 넘어가지 않도록 남은 공간만큼만 지급
+            const room = Math.max(0, target - student.gems);
+            const give = Math.min(amount, room);
+            if (give <= 0) continue;
+            student.gems += give;
             student.history.unshift({
               timestamp: Date.now(),
-              reason: reasonText
+              reason: `${reasonText} (+${give})`
             });
             if (student.history.length > 50) student.history.pop();
 
@@ -1079,10 +1144,10 @@
           }
         } else {
           // 0개 이하에서도 음수로 계속 차감 가능하도록 조건 해제
-          student.gems -= 1;
+          student.gems -= amount;
           student.history.unshift({
             timestamp: Date.now(),
-            reason: `[차감] ${reasonText}`
+            reason: `[차감] ${reasonText} (-${amount})`
           });
           if (student.history.length > 50) student.history.pop();
         }
@@ -1237,8 +1302,9 @@
           <span class="text-base">${item.icon}</span>
           <span class="text-slate-700 text-[11px] font-semibold">${item.label}</span>
         `;
-        btn.addEventListener('click', async () => {
-          await addGemWithReason(student.id, `${item.label} ${item.icon}`);
+        btn.addEventListener('click', () => {
+          // 개수까지 지정할 수 있도록 사유 선택 모달을 열어 사유를 미리 적용한다
+          openReasonPickerPrefilled('plus', [student.id], `${item.label} ${item.icon}`);
         });
         presetContainer.appendChild(btn);
       });
@@ -1286,7 +1352,7 @@
       lucide.createIcons();
     }
 
-    async function addGemWithReason(studentId, reason) {
+    async function addGemWithReason(studentId, reason, amount = 1) {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
 
@@ -1296,10 +1362,17 @@
         return;
       }
 
-      student.gems += 1;
+      // 개수 보정 (목표를 넘지 않도록)
+      let qty = parseInt(amount, 10);
+      if (isNaN(qty) || qty < 1) qty = 1;
+      const room = Math.max(0, target - student.gems);
+      const give = Math.min(qty, room);
+      if (give <= 0) return;
+
+      student.gems += give;
       student.history.unshift({
         timestamp: Date.now(),
-        reason: reason
+        reason: give > 1 ? `${reason} (+${give})` : reason
       });
       if (student.history.length > 50) student.history.pop();
 
@@ -1622,10 +1695,14 @@
 
       document.getElementById('btn-add-custom-reason').addEventListener('click', () => {
         const input = document.getElementById('custom-reason-input');
+        const amtInput = document.getElementById('custom-reason-amount');
         const reason = input.value.trim();
         if (!reason || !activeStudentId) return;
-        addGemWithReason(activeStudentId, `${reason} 🌟`);
+        let qty = parseInt(amtInput ? amtInput.value : '1', 10);
+        if (isNaN(qty) || qty < 1) qty = 1;
+        addGemWithReason(activeStudentId, `${reason} 🌟`, qty);
         input.value = '';
+        if (amtInput) amtInput.value = 1;
       });
 
       document.getElementById('custom-reason-input').addEventListener('keydown', (e) => {
